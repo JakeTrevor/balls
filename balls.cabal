@@ -25,7 +25,9 @@ source-repository head
 
 library
   exposed-modules:
-      Lib
+      Ball
+      Game
+      Settings
       Vectors
   other-modules:
       Paths_balls
@@ -37,6 +39,9 @@ library
   build-depends:
       base >=4.7 && <5
     , gloss
+    , mtl
+    , optparse-applicative
+    , transformers
   default-language: Haskell2010
 
 executable balls-exe
@@ -52,6 +57,9 @@ executable balls-exe
       balls
     , base >=4.7 && <5
     , gloss
+    , mtl
+    , optparse-applicative
+    , transformers
   default-language: Haskell2010
 
 test-suite balls-test
@@ -68,4 +76,7 @@ test-suite balls-test
       balls
     , base >=4.7 && <5
     , gloss
+    , mtl
+    , optparse-applicative
+    , transformers
   default-language: Haskell2010

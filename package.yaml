@@ -22,6 +22,9 @@ description: Please see the README on GitHub at <https://github.com/JakeTrev/bal
 dependencies:
   - base >= 4.7 && < 5
   - gloss
+  - optparse-applicative
+  - mtl
+  - transformers
 
 ghc-options:
   - -Wall
