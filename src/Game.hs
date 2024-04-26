@@ -8,7 +8,7 @@ import Control.Monad.Reader (runReader)
 import Graphics.Gloss
 import Graphics.Gloss.Interface.IO.Game
 import Options.Applicative (execParser)
-import Settings (Setting, fps, settingsParser)
+import Settings (Setting (..), fps, settingsParser)
 import Vectors
 
 data World = MkWorld {slingshot :: Maybe Point, mouse :: Point, worldBalls :: [Ball]}
@@ -26,16 +26,23 @@ handle (EventKey (MouseButton RightButton) Up _ p1) world@(MkWorld {slingshot = 
   return $ world {slingshot = Nothing, worldBalls = balls}
 handle _ x = return x
 
-render :: World -> IO Picture
-render (MkWorld {worldBalls = balls, slingshot = s, mouse = m}) =
-  let ballPics = mconcat $ map renderBall balls
+render :: Setting -> World -> IO Picture
+render (MkSetting {colours = cols}) (MkWorld {worldBalls = balls, slingshot = s, mouse = m}) =
+  let ballPics = mconcat $ map (renderBall cols) balls
       arrow = case s of
         Just x -> Color red $ line [x, m]
         _ -> blank
    in return $ ballPics <> arrow
 
-renderBall :: Ball -> Picture
-renderBall (MkBall (x, y) _) = translate x y $ Color black $ circleSolid 10
+renderBall :: Bool -> Ball -> Picture
+renderBall cols (MkBall (x, y) v _) = translate x y $ Color c $ circleSolid 10
+  where
+    c = if cols then vecAsColour v else black
+
+vecAsColour :: Point -> Color
+vecAsColour v =
+  let value = magnitude v / 25
+   in mixColors value (1 - value) red blue
 
 -- step
 
@@ -51,4 +58,4 @@ playBall :: IO ()
 playBall = do
   factory <- execParser settingsParser
   setting <- factory
-  playIO FullScreen white (fps setting) startingWorld render handle (step setting)
+  playIO FullScreen white (fps setting) startingWorld (render setting) handle (step setting)

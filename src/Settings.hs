@@ -13,19 +13,19 @@ import Control.Applicative (Alternative ((<|>)), (<**>))
 import GHC.Base (divInt)
 import Graphics.Gloss (Point)
 import Graphics.Gloss.Interface.Environment (getScreenSize)
-import Options.Applicative (Parser, ParserInfo, auto, fullDesc, help, helper, info, long, option, progDesc, short, showDefault, value)
+import Options.Applicative (Parser, ParserInfo, auto, fullDesc, help, helper, info, long, option, progDesc, short, showDefault, switch, value)
 
 _fps :: Int
 _fps = 120
 
 data Boundaries = MkBoundaries {top :: Maybe Float, right :: Maybe Float, bottom :: Maybe Float, left :: Maybe Float}
 
-data Setting = MkSetting {boundaries :: Boundaries, g :: Float, decay :: Float, fps :: Int}
+data Setting = MkSetting {boundaries :: Boundaries, g :: Float, decay :: Float, fps :: Int, colours :: Bool}
 
-mkIOSetting :: IO Boundaries -> Float -> Float -> Int -> IO Setting
-mkIOSetting ioBounds g decay fps = do
+mkIOSetting :: IO Boundaries -> Float -> Float -> Int -> Bool -> IO Setting
+mkIOSetting ioBounds g decay fps cols = do
   bounds <- ioBounds
-  return $ MkSetting bounds g decay fps
+  return $ MkSetting bounds g decay fps cols
 
 getLimits :: IO Point
 getLimits = do
@@ -41,18 +41,18 @@ mkBounds (Custom (t, r, b, l)) = do
   (w, h) <- getLimits
   return $ MkBoundaries {top = check t h, right = check r w, bottom = check b (-h), left = check l (-w)}
   where
-    check pred v = if pred then Just v else Nothing
+    check cond v = if cond then Just v else Nothing
 
 -- overall presets
 idealGas :: IO Setting
 idealGas = do
   bounds <- mkBounds Box
-  return $ MkSetting {boundaries = bounds, g = 0, decay = 1, fps = _fps}
+  return $ MkSetting {boundaries = bounds, g = 0, decay = 1, fps = _fps, colours = True}
 
 ballistics :: IO Setting
 ballistics = do
   bounds <- mkBounds ThreeSides
-  return $ MkSetting {boundaries = bounds, g = 9.81 / fromIntegral _fps, decay = 0.8, fps = _fps}
+  return $ MkSetting {boundaries = bounds, g = 9.81 / fromIntegral _fps, decay = 0.8, fps = _fps, colours = False}
 
 -- parsing
 
@@ -100,8 +100,22 @@ decayParser =
         <> showDefault
     )
 
+coloursParser :: Parser Bool
+coloursParser =
+  switch
+    ( long "Colours"
+        <> short 'c'
+        <> help "Map velocity to a colour"
+    )
+
 customSettingParser :: Parser (IO Setting)
-customSettingParser = mkIOSetting <$> boundaryParser <*> gParser <*> decayParser <*> pure _fps
+customSettingParser =
+  mkIOSetting
+    <$> boundaryParser
+    <*> gParser
+    <*> decayParser
+    <*> pure _fps
+    <*> coloursParser
 
 data Preset = IdealGas | Ballistics
   deriving (Read, Show)
