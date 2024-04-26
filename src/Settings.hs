@@ -35,12 +35,12 @@ getLimits = do
 box :: IO Boundaries
 box = do
   (w, h) <- getLimits
-  return $ MkBoundaries (Just h) (Just w) (Just (-h)) (Just (-w))
+  return $ MkBoundaries {top = Just h, right = Just w, bottom = Just (-h), left = Just (-w)}
 
 threeSides :: IO Boundaries
 threeSides = do
   (w, h) <- getLimits
-  return $ MkBoundaries Nothing (Just w) (Just (-h)) (Just (-w))
+  return $ MkBoundaries {top = Nothing, right = Just w, bottom = Just (-h), left = Just (-w)}
 
 -- overall presets
 idealGas :: IO Setting

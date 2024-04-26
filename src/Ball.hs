@@ -18,17 +18,17 @@ move ball@(MkBall {pos = p, vel = v}) = ball {pos = vectorAdd p v}
 
 collideBoundaries :: Ball -> Reader Setting Ball
 collideBoundaries ball =
-  try (collideBottom ball)
-    >>= try . collideTop
-    >>= try . collideLeft
-    >>= try . collideRight
+  try collideBottom ball
+    >>= try collideTop
+    >>= try collideLeft
+    >>= try collideRight
   where
-    try = fromMaybeT ball
+    try f x = fromMaybeT x (f x)
 
 type BoundaryCollider = Ball -> MaybeT (Reader Setting) Ball
 
 fromMaybeT :: (Monad m) => a -> MaybeT m a -> m a
-fromMaybeT dflt x = runMaybeT x <&> fromMaybe dflt
+fromMaybeT value comp = runMaybeT comp <&> fromMaybe value
 
 collideTop :: BoundaryCollider
 collideTop ball@(MkBall {pos = (px, py), vel = (x, y)}) = do
@@ -51,7 +51,7 @@ collideBottom ball@(MkBall {pos = (px, py), vel = (x, y)}) = do
 
   return $
     if py <= limit
-      then MkBall {pos = pos', vel = vel'}
+      then ball {pos = pos', vel = vel'}
       else ball
 
 collideLeft :: BoundaryCollider
@@ -63,7 +63,7 @@ collideLeft ball@(MkBall {pos = (px, py), vel = (x, y)}) = do
 
   return $
     if px <= limit
-      then MkBall {pos = pos', vel = vel'}
+      then ball {pos = pos', vel = vel'}
       else ball
 
 collideRight :: BoundaryCollider
