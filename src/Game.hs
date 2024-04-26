@@ -15,14 +15,14 @@ data World = MkWorld {slingshot :: Maybe Point, mouse :: Point, worldBalls :: [B
 
 handle :: Event -> World -> IO World
 handle (EventKey (MouseButton LeftButton) Down _ coords) world = do
-  let balls = MkBall coords (0, 0) : worldBalls world
+  let balls = MkBall coords (0, 0) 10 : worldBalls world
   return $ world {worldBalls = balls}
 handle (EventMotion coords) world = return $ world {mouse = coords}
 handle (EventKey (MouseButton RightButton) Down _ coords) world = return $ world {slingshot = Just coords, mouse = coords}
 handle (EventKey (MouseButton RightButton) Up _ _) world@(MkWorld {slingshot = Nothing}) = return world
 handle (EventKey (MouseButton RightButton) Up _ p1) world@(MkWorld {slingshot = Just p2}) = do
   let v = scalarMul (vectorSub p2 p1) 0.1
-  let balls = MkBall p1 v : worldBalls world
+  let balls = MkBall p1 v 10 : worldBalls world
   return $ world {slingshot = Nothing, worldBalls = balls}
 handle _ x = return x
 

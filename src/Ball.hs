@@ -8,7 +8,10 @@ import Graphics.Gloss
 import Settings (Boundaries (..), Setting (..))
 import Vectors
 
-data Ball = MkBall {pos :: Point, vel :: Point}
+data Ball = MkBall {pos :: Point, vel :: Point, size :: Float}
+
+mass :: Ball -> Float
+mass = (** 2) . size
 
 accelerate :: Point -> Ball -> Ball
 accelerate force ball@(MkBall {vel = v}) = ball {vel = vectorAdd v force}
@@ -39,7 +42,7 @@ collideTop ball@(MkBall {pos = (px, py), vel = (x, y)}) = do
 
   return $
     if py >= limit
-      then MkBall {pos = pos', vel = vel'}
+      then ball {pos = pos', vel = vel'}
       else ball
 
 collideBottom :: BoundaryCollider
@@ -74,12 +77,12 @@ collideRight ball@(MkBall {pos = (px, py), vel = (x, y)}) = do
   let vel' = (-x, y)
   return $
     if px >= limit
-      then MkBall {pos = pos', vel = vel'}
+      then ball {pos = pos', vel = vel'}
       else ball
 
 -- ball collisions
 didCollide :: Ball -> Ball -> Bool
-didCollide b1 b2 = dist (pos b1) (pos b2) <= 20
+didCollide b1 b2 = dist (pos b1) (pos b2) <= (size b1 + size b2)
 
 collideBalls :: [Ball] -> [Ball] -> [Ball]
 collideBalls oldBalls (b : bs) = updatedBall : rest
@@ -97,18 +100,21 @@ resolveCollision :: Ball -> Ball -> Ball
 resolveCollision b1@(MkBall {vel = v1}) b2@(MkBall {vel = v2}) = b1 {pos = newPos, vel = finalVelocity}
   where
     normal' = vectorSub (pos b1) (pos b2)
-    deltaP = (10 - magnitude normal') / 2
+    normal = unit normal'
+
+    minDist = size b1 + size b2
+    deltaP = (minDist - magnitude normal') / 2
     deltaPVec = scalarMul normal deltaP
     newPos = vectorSub (pos b1) deltaPVec
 
-    normal = unit normal'
+    m1 = mass b1
+    m2 = mass b2
+
     tangent = perpendicular normal
     (v1n, v1t) = project normal tangent v1
-    (v2n, v2t) = project normal tangent v2
+    (v2n, _v2t) = project normal tangent v2
     v1t' = v1t
-    _v2t' = v2t
-    v1n' = v2n
-    _v2n' = v1n
+    v1n' = ((v1n * (m1 - m2)) + (2 * m2 * v2n)) / (m1 + m2)
     finalVelocity = vectorAdd (scalarMul normal v1n') (scalarMul tangent v1t')
 
 updateBall :: Ball -> Reader Setting Ball
