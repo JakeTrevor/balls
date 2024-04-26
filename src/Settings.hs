@@ -2,8 +2,6 @@
 
 module Settings
   ( Boundaries (..),
-    box,
-    threeSides,
     Setting (..),
     idealGas,
     ballistics,
@@ -11,7 +9,7 @@ module Settings
   )
 where
 
-import Control.Applicative ((<**>))
+import Control.Applicative (Alternative ((<|>)), (<**>))
 import GHC.Base (divInt)
 import Graphics.Gloss (Point)
 import Graphics.Gloss.Interface.Environment (getScreenSize)
@@ -24,6 +22,11 @@ data Boundaries = MkBoundaries {top :: Maybe Float, right :: Maybe Float, bottom
 
 data Setting = MkSetting {boundaries :: Boundaries, g :: Float, decay :: Float, fps :: Int}
 
+mkIOSetting :: IO Boundaries -> Float -> Float -> Int -> IO Setting
+mkIOSetting ioBounds g decay fps = do
+  bounds <- ioBounds
+  return $ MkSetting bounds g decay fps
+
 getLimits :: IO Point
 getLimits = do
   (w, h) <- getScreenSize
@@ -31,29 +34,75 @@ getLimits = do
   let wLimits = fromIntegral (divInt w 2) - 10
   return (wLimits, hLimits)
 
--- boundary pre-sets
-box :: IO Boundaries
-box = do
+mkBounds :: Boundary -> IO Boundaries
+mkBounds Box = mkBounds $ Custom (True, True, True, True)
+mkBounds ThreeSides = mkBounds $ Custom (False, True, True, True)
+mkBounds (Custom (t, r, b, l)) = do
   (w, h) <- getLimits
-  return $ MkBoundaries {top = Just h, right = Just w, bottom = Just (-h), left = Just (-w)}
-
-threeSides :: IO Boundaries
-threeSides = do
-  (w, h) <- getLimits
-  return $ MkBoundaries {top = Nothing, right = Just w, bottom = Just (-h), left = Just (-w)}
+  return $ MkBoundaries {top = check t h, right = check r w, bottom = check b (-h), left = check l (-w)}
+  where
+    check pred v = if pred then Just v else Nothing
 
 -- overall presets
 idealGas :: IO Setting
 idealGas = do
-  bounds <- box
+  bounds <- mkBounds Box
   return $ MkSetting {boundaries = bounds, g = 0, decay = 1, fps = _fps}
 
 ballistics :: IO Setting
 ballistics = do
-  bounds <- threeSides
+  bounds <- mkBounds ThreeSides
   return $ MkSetting {boundaries = bounds, g = 9.81 / fromIntegral _fps, decay = 0.8, fps = _fps}
 
 -- parsing
+
+data Boundary = Box | ThreeSides | Custom (Bool, Bool, Bool, Bool)
+  deriving (Show)
+
+instance Read Boundary where
+  readsPrec _ "Box" = [(Box, "")]
+  readsPrec _ "ThreeSides" = [(ThreeSides, "")]
+  readsPrec _ l@[_, _, _, _] = let [w, x, y, z] = map ('x' ==) l in [(Custom (w, x, y, z), "")]
+  readsPrec _ _ = []
+
+boundaryParser :: Parser (IO Boundaries)
+boundaryParser =
+  mkBounds
+    <$> option
+      auto
+      ( long "boundary"
+          <> short 'b'
+          <> help "which sides should be boundaries"
+          <> value ThreeSides
+          <> showDefault
+      )
+
+gParser :: Parser Float
+gParser =
+  (/ fromIntegral _fps)
+    <$> option
+      auto
+      ( long "gravity"
+          <> short 'g'
+          <> help "force due to gravity"
+          <> value 9.81
+          <> showDefault
+      )
+
+decayParser :: Parser Float
+decayParser =
+  option
+    auto
+    ( long "decay"
+        <> short 'd'
+        <> help "Energy loss; velocity after collision with the floor will be multiplied by this"
+        <> value 1
+        <> showDefault
+    )
+
+customSettingParser :: Parser (IO Setting)
+customSettingParser = mkIOSetting <$> boundaryParser <*> gParser <*> decayParser <*> pure _fps
+
 data Preset = IdealGas | Ballistics
   deriving (Read, Show)
 
@@ -72,5 +121,8 @@ presetParser =
           <> showDefault
       )
 
+sParser :: Parser (IO Setting)
+sParser = presetParser <|> customSettingParser
+
 settingsParser :: ParserInfo (IO Setting)
-settingsParser = info (presetParser <**> helper) (fullDesc <> progDesc "Simulate Your Balls")
+settingsParser = info (sParser <**> helper) (fullDesc <> progDesc "Simulate Your Balls")
