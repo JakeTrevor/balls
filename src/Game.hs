@@ -16,8 +16,8 @@ data World = MkWorld {slingshot :: Maybe Point, mouse :: Point, worldBalls :: [B
 handle :: Event -> World -> IO World
 handle (EventKey (Char 'e') Down _ _) world@(MkWorld {newSize = sz}) = return $ world {newSize = sz + 1}
 handle (EventKey (MouseButton WheelUp) Down _ _) world@(MkWorld {newSize = sz}) = return $ world {newSize = sz + 1}
-handle (EventKey (Char 'q') Down _ _) world@(MkWorld {newSize = sz}) = return $ world {newSize = sz - 1}
-handle (EventKey (MouseButton WheelDown) Down _ _) world@(MkWorld {newSize = sz}) = return $ world {newSize = sz - 1}
+handle (EventKey (Char 'q') Down _ _) world@(MkWorld {newSize = sz}) = return $ world {newSize = max (sz - 1) 1}
+handle (EventKey (MouseButton WheelDown) Down _ _) world@(MkWorld {newSize = sz}) = return $ world {newSize = max (sz - 1) 1}
 handle (EventKey (MouseButton LeftButton) Down _ coords) world = do
   let balls = MkBall coords (0, 0) (newSize world) : worldBalls world
   return $ world {worldBalls = balls}
