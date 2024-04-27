@@ -72,7 +72,7 @@ boundaryParser =
       auto
       ( long "boundary"
           <> short 'b'
-          <> help "which sides should be boundaries"
+          <> help "which sides should be boundaries; use a preset (Box, ThreeSides) or specify a pattern (see readme for details)"
           <> value ThreeSides
           <> showDefault
       )
@@ -139,4 +139,4 @@ sParser :: Parser (IO Setting)
 sParser = presetParser <|> customSettingParser
 
 settingsParser :: ParserInfo (IO Setting)
-settingsParser = info (sParser <**> helper) (fullDesc <> progDesc "Simulate Your Balls")
+settingsParser = info (sParser <**> helper) (fullDesc <> progDesc "Simulate Balls with Physics")
