@@ -30,8 +30,8 @@ mkIOSetting ioBounds g decay fps cols = do
 getLimits :: IO Point
 getLimits = do
   (w, h) <- getScreenSize
-  let hLimits = fromIntegral (divInt h 2) - 10
-  let wLimits = fromIntegral (divInt w 2) - 10
+  let hLimits = fromIntegral (divInt h 2)
+  let wLimits = fromIntegral (divInt w 2)
   return (wLimits, hLimits)
 
 mkBounds :: Boundary -> IO Boundaries

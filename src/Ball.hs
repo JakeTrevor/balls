@@ -4,11 +4,13 @@ import Control.Monad.Reader
 import Control.Monad.Trans.Maybe
 import Data.Functor ((<&>))
 import Data.Maybe (fromMaybe)
+import Debug.Trace (trace)
 import Graphics.Gloss
 import Settings (Boundaries (..), Setting (..))
 import Vectors
 
 data Ball = MkBall {pos :: Point, vel :: Point, size :: Float}
+  deriving (Show)
 
 mass :: Ball -> Float
 mass = (** 2) . size
@@ -28,57 +30,55 @@ collideBoundaries ball =
   where
     try f x = fromMaybeT x (f x)
 
-type BoundaryCollider = Ball -> MaybeT (Reader Setting) Ball
-
 fromMaybeT :: (Monad m) => a -> MaybeT m a -> m a
 fromMaybeT value comp = runMaybeT comp <&> fromMaybe value
 
-collideTop :: BoundaryCollider
-collideTop ball@(MkBall {pos = (px, py), vel = (x, y)}) = do
-  MkSetting {boundaries = (MkBoundaries {top = maybeLimit})} <- ask
-  limit <- hoistMaybe maybeLimit
-  let pos' = (px, limit - (py - limit))
-  let vel' = (x, -y)
+data Axis = X | Y
 
+transform :: Axis -> (Float -> Float) -> Point -> Point
+transform X f (x, y) = (f x, y)
+transform Y f (x, y) = (x, f y)
+
+getAxis :: Axis -> Point -> Float
+getAxis X = fst
+getAxis Y = snd
+
+boundaryCollider :: Axis -> Maybe Float -> Ball -> Maybe Ball
+boundaryCollider _ Nothing _ = Nothing
+boundaryCollider _ (Just 0) _ = Nothing
+boundaryCollider ax limit'' ball@(MkBall {pos = p, vel = v, size = sz}) = do
+  limit' <- limit''
+  let limit = if limit' < 0 then limit' + sz else limit' - sz
+
+  let vel' = transform ax negate v
+  let pos' = transform ax ((2 * limit) -) p
+  let coord = getAxis ax p
   return $
-    if py >= limit
+    if (coord * limit > 0) && (abs coord >= abs limit)
       then ball {pos = pos', vel = vel'}
       else ball
 
-collideBottom :: BoundaryCollider
-collideBottom ball@(MkBall {pos = (px, py), vel = (x, y)}) = do
-  MkSetting {boundaries = (MkBoundaries {bottom = maybeLimit}), decay = d} <- ask
-  limit <- hoistMaybe maybeLimit
-  let pos' = (px, limit - (py - limit))
-  let vel' = scalarMul (x, -y) d
+collideTop :: Ball -> MaybeT (Reader Setting) Ball
+collideTop ball = do
+  MkSetting {boundaries = (MkBoundaries {top = limit})} <- ask
+  hoistMaybe $ boundaryCollider Y limit ball
 
-  return $
-    if py <= limit
-      then ball {pos = pos', vel = vel'}
-      else ball
+collideBottom :: Ball -> MaybeT (Reader Setting) Ball
+collideBottom ball = do
+  MkSetting {boundaries = (MkBoundaries {bottom = limit}), decay = d} <- ask
+  ball'@(MkBall {vel = v}) <- hoistMaybe $ boundaryCollider Y limit ball
+  let vel' = scalarMul v d
+  return ball' {vel = vel'}
 
-collideLeft :: BoundaryCollider
-collideLeft ball@(MkBall {pos = (px, py), vel = (x, y)}) = do
-  MkSetting {boundaries = (MkBoundaries {left = maybeLimit})} <- ask
-  limit <- hoistMaybe maybeLimit
-  let pos' = (limit - (px - limit), py)
-  let vel' = (-x, y)
+collideLeft :: Ball -> MaybeT (Reader Setting) Ball
+collideLeft ball = do
+  MkSetting {boundaries = (MkBoundaries {left = limit})} <- ask
+  hoistMaybe $ boundaryCollider X limit ball
 
-  return $
-    if px <= limit
-      then ball {pos = pos', vel = vel'}
-      else ball
-
-collideRight :: BoundaryCollider
-collideRight ball@(MkBall {pos = (px, py), vel = (x, y)}) = do
-  MkSetting {boundaries = (MkBoundaries {right = maybeLimit})} <- ask
-  limit <- hoistMaybe maybeLimit
-  let pos' = (limit - (px - limit), py)
-  let vel' = (-x, y)
-  return $
-    if px >= limit
-      then ball {pos = pos', vel = vel'}
-      else ball
+collideRight :: Ball -> MaybeT (Reader Setting) Ball
+collideRight ball = do
+  MkSetting {boundaries = (MkBoundaries {right = limit})} <- ask
+  hoistMaybe $ boundaryCollider X limit ball
 
 -- ball collisions
 didCollide :: Ball -> Ball -> Bool
@@ -99,13 +99,13 @@ collide b1 b2
 resolveCollision :: Ball -> Ball -> Ball
 resolveCollision b1@(MkBall {vel = v1}) b2@(MkBall {vel = v2}) = b1 {pos = newPos, vel = finalVelocity}
   where
-    normal' = vectorSub (pos b1) (pos b2)
+    normal' = vectorSub (pos b2) (pos b1)
     normal = unit normal'
 
     minDist = size b1 + size b2
-    deltaP = (minDist - magnitude normal') / 2
-    deltaPVec = scalarMul normal deltaP
-    newPos = vectorSub (pos b1) deltaPVec
+    speedAdjustment = magnitude v1 / (magnitude v1 + magnitude v2)
+    deltaP = (minDist - magnitude normal') * ((size b1 + 1) / minDist) * speedAdjustment
+    newPos = vectorSub (pos b1) $ scalarMul normal deltaP
 
     m1 = mass b1
     m2 = mass b2
