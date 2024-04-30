@@ -53,10 +53,9 @@ boundaryCollider ax limit'' ball@(MkBall {pos = p, vel = v, size = sz}) = do
   let vel' = transform ax negate v
   let pos' = transform ax ((2 * limit) -) p
   let coord = getAxis ax p
-  return $
-    if (coord * limit > 0) && (abs coord >= abs limit)
-      then ball {pos = pos', vel = vel'}
-      else ball
+  if (coord * limit > 0) && (abs coord >= abs limit)
+    then Just ball {pos = pos', vel = vel'}
+    else Nothing
 
 collideTop :: Ball -> MaybeT (Reader Setting) Ball
 collideTop ball = do
