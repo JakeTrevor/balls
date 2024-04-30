@@ -11,9 +11,10 @@ import Options.Applicative (execParser)
 import Settings (Setting (..), fps, settingsParser)
 import Vectors
 
-data World = MkWorld {slingshot :: Maybe Point, mouse :: Point, worldBalls :: [Ball], newSize :: Float}
+data World = MkWorld {slingshot :: Maybe Point, mouse :: Point, worldBalls :: [Ball], newSize :: Float, pause :: Bool}
 
 handle :: Event -> World -> IO World
+handle (EventKey (Char 'p') Down _ _) world@(MkWorld {pause = p}) = return $ world {pause = not p}
 handle (EventKey (Char 'e') Down _ _) world@(MkWorld {newSize = sz}) = return $ world {newSize = sz + 1}
 handle (EventKey (MouseButton WheelUp) Down _ _) world@(MkWorld {newSize = sz}) = return $ world {newSize = sz + 1}
 handle (EventKey (Char 'q') Down _ _) world@(MkWorld {newSize = sz}) = return $ world {newSize = max (sz - 1) 1}
@@ -52,12 +53,13 @@ vecAsColour v =
 -- step
 
 step :: Setting -> Float -> World -> IO World
+step _ _t world@(MkWorld {pause = True}) = return world
 step setting _t world = do
   let balls' = runReader (updateBalls (worldBalls world)) setting
   return $ world {worldBalls = balls'}
 
 startingWorld :: World
-startingWorld = (MkWorld {slingshot = Nothing, mouse = (0, 0), worldBalls = [], newSize = 10})
+startingWorld = (MkWorld {slingshot = Nothing, mouse = (0, 0), worldBalls = [], newSize = 10, pause = False})
 
 playBall :: IO ()
 playBall = do
