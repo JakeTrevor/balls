@@ -116,6 +116,23 @@ resolveCollision b1@(MkBall {vel = v1}) b2@(MkBall {vel = v2}) = b1 {pos = newPo
     v1n' = ((v1n * (m1 - m2)) + (2 * m2 * v2n)) / (m1 + m2)
     finalVelocity = vectorAdd (scalarMul normal v1n') (scalarMul tangent v1t')
 
+applyForce :: Float -> Ball -> Ball -> Ball
+applyForce gravConst b1 b2 = do
+  let normal = vectorSub (pos b2) (pos b1)
+
+  let m2 = mass b2
+
+  let acceleration = (gravConst * m2) / (magnitude normal ** 2)
+  let accelerationVector = scalarMul (unit normal) acceleration
+
+  accelerate accelerationVector b1
+
+attractParticles :: Float -> [Ball] -> [Ball] -> [Ball]
+attractParticles _ _ [] = []
+attractParticles iGrav oldBalls (b : bs) =
+  foldl (applyForce iGrav) b (oldBalls ++ bs)
+    : attractParticles iGrav (b : oldBalls) bs
+
 updateBall :: Ball -> Reader Setting Ball
 updateBall ball = do
   (MkSetting {g = grav}) <- ask
@@ -124,5 +141,12 @@ updateBall ball = do
 
 updateBalls :: [Ball] -> Reader Setting [Ball]
 updateBalls balls = do
+  (MkSetting {i = iGrav}) <- ask
   balls' <- mapM updateBall balls
-  return $ collideBalls [] balls'
+
+  let balls'' =
+        ( case iGrav of
+            Nothing -> balls'
+            Just iGrav' -> attractParticles iGrav' [] balls'
+        )
+  return $ collideBalls [] balls''

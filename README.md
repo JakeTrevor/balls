@@ -14,7 +14,13 @@ You can pause/unpause the simulation with `p`
 
 ## Presets
 
-There are two preset environments which capture the most interesting behaviour of the system. You can choose between them with the `-p` flag. The options are `Ballistics` and `IdealGas`. Ballistics is the default.
+There are three preset environments which capture the most interesting behaviour of the system. You can choose between them with the `-p` flag. The options are `Ballistics`, `IdealGas` and `Orbital`. Ballistics is the default.
+
+Ballistics has downwards global gravity and energy loss in collisions with the floor. There are no inter-particle forces.
+
+Ideal gas has no global gravity or inter-particle forces. All Collisions (including those with the walls) are totally elastic; velocity-Colour is on.
+
+Orbital has no bounds, but there are inter-particle forces - so you can use it to simulate orbits. This can be quite fiddly - pausing can be helpful.
 
 ## Custom
 

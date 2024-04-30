@@ -10,6 +10,7 @@ module Settings
 where
 
 import Control.Applicative (Alternative ((<|>)), (<**>))
+import Data.Functor ((<&>))
 import GHC.Base (divInt)
 import Graphics.Gloss (Point)
 import Graphics.Gloss.Interface.Environment (getScreenSize)
@@ -20,12 +21,12 @@ _fps = 120
 
 data Boundaries = MkBoundaries {top :: Maybe Float, right :: Maybe Float, bottom :: Maybe Float, left :: Maybe Float}
 
-data Setting = MkSetting {boundaries :: Boundaries, g :: Float, decay :: Float, fps :: Int, colours :: Bool}
+data Setting = MkSetting {boundaries :: Boundaries, g :: Float, decay :: Float, fps :: Int, colours :: Bool, i :: Maybe Float}
 
-mkIOSetting :: IO Boundaries -> Float -> Float -> Int -> Bool -> IO Setting
-mkIOSetting ioBounds g decay fps cols = do
+mkIOSetting :: IO Boundaries -> Float -> Float -> Int -> Bool -> Maybe Float -> IO Setting
+mkIOSetting ioBounds g decay fps cols i = do
   bounds <- ioBounds
-  return $ MkSetting bounds g decay fps cols
+  return $ MkSetting bounds g decay fps cols i
 
 getLimits :: IO Point
 getLimits = do
@@ -37,6 +38,7 @@ getLimits = do
 mkBounds :: Boundary -> IO Boundaries
 mkBounds Box = mkBounds $ Custom (True, True, True, True)
 mkBounds ThreeSides = mkBounds $ Custom (False, True, True, True)
+mkBounds None = mkBounds $ Custom (False, False, False, False)
 mkBounds (Custom (t, r, b, l)) = do
   (w, h) <- getLimits
   return $ MkBoundaries {top = check t h, right = check r w, bottom = check b (-h), left = check l (-w)}
@@ -47,21 +49,27 @@ mkBounds (Custom (t, r, b, l)) = do
 idealGas :: IO Setting
 idealGas = do
   bounds <- mkBounds Box
-  return $ MkSetting {boundaries = bounds, g = 0, decay = 1, fps = _fps, colours = True}
+  return $ MkSetting {boundaries = bounds, g = 0, decay = 1, fps = _fps, colours = True, i = Nothing}
 
 ballistics :: IO Setting
 ballistics = do
   bounds <- mkBounds ThreeSides
-  return $ MkSetting {boundaries = bounds, g = 9.81 / fromIntegral _fps, decay = 0.8, fps = _fps, colours = False}
+  return $ MkSetting {boundaries = bounds, g = 9.81 / fromIntegral _fps, decay = 0.8, fps = _fps, colours = False, i = Nothing}
+
+orbital :: IO Setting
+orbital = do
+  bounds <- mkBounds None
+  return $ MkSetting {boundaries = bounds, g = 0 / fromIntegral _fps, decay = 0, fps = _fps, colours = False, i = Just (6.67 * (10 ** (-2)))}
 
 -- parsing
 
-data Boundary = Box | ThreeSides | Custom (Bool, Bool, Bool, Bool)
+data Boundary = Box | ThreeSides | None | Custom (Bool, Bool, Bool, Bool)
   deriving (Show)
 
 instance Read Boundary where
   readsPrec _ "Box" = [(Box, "")]
   readsPrec _ "ThreeSides" = [(ThreeSides, "")]
+  readsPrec _ "None" = [(None, "")]
   readsPrec _ l@[_, _, _, _] = let [w, x, y, z] = map ('x' ==) l in [(Custom (w, x, y, z), "")]
   readsPrec _ _ = []
 
@@ -108,6 +116,18 @@ coloursParser =
         <> help "Map velocity to a colour"
     )
 
+iParser :: Parser (Maybe Float)
+iParser =
+  (<&> (/ fromIntegral _fps))
+    <$> option
+      auto
+      ( long "Inter-particle force"
+          <> short 'g'
+          <> help "Attraction between particles; G in GMm/r^2"
+          <> value Nothing
+          <> showDefault
+      )
+
 customSettingParser :: Parser (IO Setting)
 customSettingParser =
   mkIOSetting
@@ -116,8 +136,9 @@ customSettingParser =
     <*> decayParser
     <*> pure _fps
     <*> coloursParser
+    <*> iParser
 
-data Preset = IdealGas | Ballistics
+data Preset = IdealGas | Ballistics | Orbital
   deriving (Read, Show)
 
 presetParser :: Parser (IO Setting)
@@ -125,6 +146,7 @@ presetParser =
   ( \case
       Ballistics -> ballistics
       IdealGas -> idealGas
+      Orbital -> orbital
   )
     <$> option
       auto
