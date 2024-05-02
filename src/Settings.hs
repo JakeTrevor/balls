@@ -70,7 +70,12 @@ instance Read Boundary where
   readsPrec _ "Box" = [(Box, "")]
   readsPrec _ "ThreeSides" = [(ThreeSides, "")]
   readsPrec _ "None" = [(None, "")]
-  readsPrec _ l@[_, _, _, _] = let [w, x, y, z] = map ('x' ==) l in [(Custom (w, x, y, z), "")]
+  readsPrec _ l@[_, _, _, _] =
+    let a = map ('x' ==) l
+        (w, x, y, z) = case a of
+          [w', x', y', z'] -> (w', x', y', z')
+          _ -> error "impossible"
+     in [(Custom (w, x, y, z), "")]
   readsPrec _ _ = []
 
 boundaryParser :: Parser (IO Boundaries)
