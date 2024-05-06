@@ -25,6 +25,11 @@ dependencies:
   - optparse-applicative
   - mtl
   - transformers
+  - tasty
+  - tasty-quickcheck
+  - approximate-equality
+  - quickcheck-assertions
+  - QuickCheck
 
 ghc-options:
   - -Wall

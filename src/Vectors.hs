@@ -1,5 +1,6 @@
 module Vectors
   ( Point,
+    pointAEq,
     vectorAdd,
     vectorSub,
     scalarMul,
@@ -8,11 +9,18 @@ module Vectors
     unit,
     perpendicular,
     dotProd,
+    unitProject,
     project,
   )
 where
 
 import Graphics.Gloss (Point)
+import Test.QuickCheck (Property)
+import Test.QuickCheck.Assertions ((?~==))
+import Test.Tasty.QuickCheck ((.&&.))
+
+pointAEq :: Point -> Point -> Property
+pointAEq (x1, y1) (x2, y2) = (x1 ?~== x2) .&&. (y1 ?~== y2)
 
 vectorAdd :: Point -> Point -> Point
 vectorAdd (x1, y1) (x2, y2) = (x1 + x2, y1 + y2)
@@ -42,8 +50,11 @@ perpendicular (x, y) = (-y, x)
 dotProd :: Point -> Point -> Float
 dotProd (ax, ay) (bx, by) = (ax * bx) + (ay * by)
 
-project :: Point -> Point -> Point -> Point
-project xBasis yBasis p = (x', y')
+unitProject :: Point -> Point -> Point -> Point
+unitProject xBasis yBasis p = (x', y')
   where
     x' = dotProd xBasis p
     y' = dotProd yBasis p
+
+project :: Point -> Point -> Float
+project basis v = dotProd basis v / magnitude basis ** 2

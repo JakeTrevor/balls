@@ -4,7 +4,6 @@ import Control.Monad.Reader
 import Control.Monad.Trans.Maybe
 import Data.Functor ((<&>))
 import Data.Maybe (fromMaybe)
-import Debug.Trace (trace)
 import Graphics.Gloss
 import Settings (Boundaries (..), Setting (..))
 import Vectors
@@ -110,8 +109,8 @@ resolveCollision b1@(MkBall {vel = v1}) b2@(MkBall {vel = v2}) = b1 {pos = newPo
     m2 = mass b2
 
     tangent = perpendicular normal
-    (v1n, v1t) = project normal tangent v1
-    (v2n, _v2t) = project normal tangent v2
+    (v1n, v1t) = unitProject normal tangent v1
+    (v2n, _v2t) = unitProject normal tangent v2
     v1t' = v1t
     v1n' = ((v1n * (m1 - m2)) + (2 * m2 * v2n)) / (m1 + m2)
     finalVelocity = vectorAdd (scalarMul normal v1n') (scalarMul tangent v1t')

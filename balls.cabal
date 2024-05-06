@@ -37,10 +37,15 @@ library
       src
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
   build-depends:
-      base >=4.7 && <5
+      QuickCheck
+    , approximate-equality
+    , base >=4.7 && <5
     , gloss
     , mtl
     , optparse-applicative
+    , quickcheck-assertions
+    , tasty
+    , tasty-quickcheck
     , transformers
   default-language: Haskell2010
 
@@ -54,11 +59,16 @@ executable balls-exe
       app
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
   build-depends:
-      balls
+      QuickCheck
+    , approximate-equality
+    , balls
     , base >=4.7 && <5
     , gloss
     , mtl
     , optparse-applicative
+    , quickcheck-assertions
+    , tasty
+    , tasty-quickcheck
     , transformers
   default-language: Haskell2010
 
@@ -66,6 +76,7 @@ test-suite balls-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
+      VectorTests
       Paths_balls
   autogen-modules:
       Paths_balls
@@ -73,10 +84,15 @@ test-suite balls-test
       test
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
   build-depends:
-      balls
+      QuickCheck
+    , approximate-equality
+    , balls
     , base >=4.7 && <5
     , gloss
     , mtl
     , optparse-applicative
+    , quickcheck-assertions
+    , tasty
+    , tasty-quickcheck
     , transformers
   default-language: Haskell2010
